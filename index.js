@@ -26,20 +26,25 @@ SimplePlayer.prototype.handle = function () {
 
     // On launch, we tell the user what they can do (Play audio :-))
     if (requestType === "LaunchRequest") {
+        console.log("[LaunchRequest]")
         this.say("Welcome to the Simple Audio Player. Say Play to play some audio!", "You can say Play");
 
     // Handle Intents here - Play, Pause and Resume is all for now
     } else if (requestType === "IntentRequest") {
+        console.log("[IntentRequest]")
         var intent = this.event.request.intent;
         if (intent.name === "Play") {
+            console.log("[Play]")
             this.play(podcastURL, 0);
 
         } else if (intent.name === "AMAZON.PauseIntent") {
+            console.log("[AMAZON.PauseIntent]")
             // When we receive a Pause Intent, we need to issue a stop directive
             //  Otherwise, it will resume playing - essentially, we are confirming the user's action
             this.stop();
 
         } else if (intent.name === "AMAZON.ResumeIntent") {
+            console.log("[AMAZON.ResumeIntent]")
             var lastPlayed = this.loadLastPlayed(userId);
             var offsetInMilliseconds = 0;
             if (lastPlayed !== null) {
@@ -49,11 +54,14 @@ SimplePlayer.prototype.handle = function () {
             this.play(podcastURL, offsetInMilliseconds);
         }
     } else if (requestType === "AudioPlayer.PlaybackStopped") {
+        console.log("[AudioPlayer.PlaybackStopped]")
         // We save off the PlaybackStopped Intent, so we know what was last playing
         this.saveLastPlayed(userId, this.event);
 
         // We respond with just true to acknowledge the request
         this.context.succeed(true);
+    } else {
+        console.log("[Unhandled]: ", JSON.stringify(this.event))
     }
 };
 
@@ -142,6 +150,3 @@ SimplePlayer.prototype.loadLastPlayed = function (userId) {
     }
     return lastPlayed;
 };
-
-
-

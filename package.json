@@ -1,6 +1,10 @@
 {
   "name": "SuperSimpleAudioPlayer",
   "description": "Simple Audio Player",
+  "scripts": {
+    "zip": "zip -r lambda.zip .",
+    "deploy": "npm run zip && aws lambda update-function-code --function-name simple-audio-player-index --region us-east-1 --zip-file fileb://./lambda.zip"
+  },
   "dependencies": {
     "bespoken-tools": "^1.0.1"
   },
