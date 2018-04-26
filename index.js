@@ -2,19 +2,15 @@
 // It is NOT a real database, but can be used for testing, as JavaScript Lambdas tend to live for a few hours
 // Stay tuned for a more sophisticated example that uses DynamoDB
 var lastPlayedByUser = {};
-<<<<<<< HEAD
-var podcastURL = "https://s3-us-west-2.amazonaws.com/smart-radio/audio/piano-1.mp3";
 
 const bst = require("bespoken-tools");
 bst.Logless.Domain = "logless-dev.bespoken.tools";
-=======
 
 var podcastFeed = [
     "https://feeds.soundcloud.com/stream/318108640-user-652822799-episode-012-alexa-skill-certification-with-sameer-lalwanilexa-dev-chat-final-mix.mp3",
     "https://feeds.soundcloud.com/stream/314247951-user-652822799-episode-011-alexa-smart-home-partner-network-with-zach-parker.mp3",
     "https://feeds.soundcloud.com/stream/309340878-user-652822799-episode-010-building-an-alexa-skill-with-flask-ask-with-john-wheeler.mp3"
 ];
->>>>>>> Part2
 
 // Entry-point for the Lambda
 exports.handler = bst.Logless.capture("a756512f-d091-477a-a4f9-fd57c916787a", function(event, context) {
@@ -32,10 +28,7 @@ var SimplePlayer = function (event, context) {
 SimplePlayer.prototype.handle = function () {
     var requestType = this.event.request.type;
     var userId = this.event.context ? this.event.context.System.user.userId : this.event.session.user.userId;
-<<<<<<< HEAD
-=======
     var podcastIndex;
->>>>>>> Part2
 
     // On launch, we tell the user what they can do (Play audio :-))
     if (requestType === "LaunchRequest") {
@@ -52,10 +45,6 @@ SimplePlayer.prototype.handle = function () {
         podcastIndex = indexFromEvent(lastPlayed);
 
         if (intent.name === "Play") {
-<<<<<<< HEAD
-            console.log("[Play]")
-            this.play(podcastURL, 0);
-=======
             this.play(podcastFeed[podcastIndex], 0, "REPLACE_ALL", podcastIndex);
 
         } else if (intent.name === "AMAZON.NextIntent") {
@@ -69,7 +58,6 @@ SimplePlayer.prototype.handle = function () {
             podcastIndex == 0 ? podcastIndex = podcastFeed.length - 1 : podcastIndex--;
 
             this.play(podcastFeed[podcastIndex], 0, "REPLACE_ALL", podcastIndex);
->>>>>>> Part2
 
         } else if (intent.name === "AMAZON.PauseIntent") {
             console.log("[AMAZON.PauseIntent]")
@@ -78,11 +66,7 @@ SimplePlayer.prototype.handle = function () {
             this.stop();
 
         } else if (intent.name === "AMAZON.ResumeIntent") {
-<<<<<<< HEAD
             console.log("[AMAZON.ResumeIntent]")
-            var lastPlayed = this.loadLastPlayed(userId);
-=======
->>>>>>> Part2
             var offsetInMilliseconds = 0;
             if (lastPlayed !== null) {
                 offsetInMilliseconds = lastPlayed.request.offsetInMilliseconds;
@@ -204,8 +188,6 @@ SimplePlayer.prototype.loadLastPlayed = function (userId) {
     }
     return lastPlayed;
 };
-<<<<<<< HEAD
-=======
 
 var indexFromEvent = function(event) {
     var index = 0;
@@ -215,4 +197,3 @@ var indexFromEvent = function(event) {
     }
     return index;
 };
->>>>>>> Part2
