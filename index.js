@@ -2,7 +2,7 @@
 // It is NOT a real database, but can be used for testing, as JavaScript Lambdas tend to live for a few hours
 // Stay tuned for a more sophisticated example that uses DynamoDB
 var lastPlayedByUser = {};
-var podcastURL = "https://feeds.soundcloud.com/stream/309340878-user-652822799-episode-010-building-an-alexa-skill-with-flask-ask-with-john-wheeler.mp3";
+var podcastURL = "https://s3-us-west-2.amazonaws.com/smart-radio/audio/piano-1.mp3";
 
 const bst = require("bespoken-tools");
 bst.Logless.Domain = "logless-dev.bespoken.tools";
