@@ -1,66 +1,92 @@
 <p align="center" >
-    <strong>Part 1</strong> 
-    | <a href="https://github.com/bespoken/super-simple-audio-player/tree/Part2">Part 2</a> 
+    <a href="https://github.com/bespoken/super-simple-audio-player/blob/Part1/README.md">Part 1</a> 
+    | <strong>Part 2</strong>
     | <a href="https://github.com/bespoken/super-simple-audio-player/blob/Part3/README.md">Part 3</a>
 </p>
 
-# The Super Simple AudioPlayer - Getting Started
-This project is meant to make it as easy as possible to get started using the [Amazon Alexa AudioPlayer](https://developer.amazon.com/public/solutions/alexa/alexa-skills-kit/docs/custom-audioplayer-interface-reference).
+# Part 2 - Next/Previous and the AudioPlayer Queue
+In this step, we show you how to:
+1) Use the builtin AMAZON.NextIntent and AMAZON.PreviousIntent to allow users to navigate through a playlist
+2) Queue up a next track to automatically begin playing once the current on finishes
 
-It is an AWS Lambda project with no code dependencies and no frameworks. It is meant to illustrate the core behavior of the AudioPlayer in the simplest manner possible.
+## Managing the Queue
+To manage the queue, we are going to make make use of the playBehavior property. This is what determines whether a track is played immediately or is queued to be played once the current audio completes.
 
-This is the first iteration - we will be expanding on this as a tutorial that guides users through adding behavior to their AudioPlayer skill.
+Rather than always saying `REPLACE_ALL` for the playBehavior, as we did in Part 1, we will also make use of `ENQUEUE`.
 
-## Setting Up Locally
-To begin, just clone this repository:
+To do this, we expose a few more parameters on our `play` function:
+```javascript
+SimplePlayer.prototype.play = function (audioURL, offsetInMilliseconds, playBehavior, token, previousToken) {
+    var response = {
+        version: "1.0",
+        response: {
+            shouldEndSession: true,
+            directives: [
+                {
+                    type: "AudioPlayer.Play",
+                    playBehavior: playBehavior,
+                    audioItem: {
+                        stream: {
+                            url: audioURL,
+                            token: token, // Unique token for the track - needed when queueing multiple tracks
+                            expectedPreviousToken: previousToken, // The expected previous token - when using queues, ensures safety
+                            offsetInMilliseconds: offsetInMilliseconds
+                        }
+                    }
+                }
+            ]
+        }
+    };
+
+    this.context.succeed(response);
+};
 ```
-git clone https://github.com/bespoken/super-simple-audio-player.git
+We added three parameters - `playBehavior`, `token`, and `previousToken`.
+
+The `playBehavior` can be REPLACE_ALL, ENQUEUE, or REPLACE_ENQUEUED.
+* REPLACE_ALL causes the track to begin playing immediately
+* ENQUEUE causes the track to be added at the end of the queue
+* REPLACE_ENQUEUED causes the track to be played next (and the rest of the queue to cleared)
+
+For our purposes, we are only using REPLACE_ALL and ENQUEUE right now.
+
+The tokens are also important. They give a unique label to the track being played, and are used to prevent race conditions. 
+You can [read more about it here](https://developer.amazon.com/public/solutions/alexa/alexa-skills-kit/docs/custom-audioplayer-interface-reference#play).
+
+## Handling the Next and Previous Intents
+We use the builtin AMAZON.NextIntent and AMAZON.PreviousIntent.
+
+We now have a an array of podcasts to playback, and we move through them in a cycle. Meaning, when reach the end of the array, we start over at the beginning.
+```javascript
+// If we have reached the end of the feed, start back at the beginning
+podcastIndex >= podcastFeed.length - 1 ? podcastIndex = 0 : podcastIndex++;
+
+this.play(podcastFeed[podcastIndex], 0, "REPLACE_ALL", podcastIndex);
 ```
+That way, a user can keep saying "Next" or "Previous" perpetually.
 
-To follow along, also install the BST (Bespoken Tools) CLI:
+## Automatically Playing the Next Track
+This is an important one - besides allowing the user to say Next and Previous, we want to also automatically start our next podcast once the current one finishes.
+
+To do this, we take advantage of the AudioPlayer.PlaybackNearlyFinished request that Alexa sends.
+Since only one track can be queued at a time, we need to use this to create our queue.
+
+This request comes from the Alexa service when the current audio is nearly finished playing on the device. When we receive it, we:
+* Set the playBehavior as `ENQUEUE`
+* Set the previousToken to the currently playing track
+
+```javascript
+var lastIndex = indexFromEvent(this.event);
+podcastIndex = lastIndex;
+
+// If we have reach the end of the feed, start back at the beginning
+podcastIndex >= podcastFeed.length - 1 ? podcastIndex = 0 : podcastIndex++;
+
+// Enqueue the next podcast
+this.play(podcastFeed[podcastIndex], 0, "ENQUEUE", podcastIndex, lastIndex);
 ```
-npm install bespoken-tools -g
-```
+By setting all this properly, we ensure our audio smoothly transitions from one track to the next. Neat, right?
 
-## Setting Up The Alexa Skill
-There are a number of steps to this.
-
-For a detailed walk-through, just [follow this guide](https://github.com/bespoken/super-simple-audio-player/blob/Part1/docs/skill_setup.md).
-
-## What It Does
-This skill is very simple. It is meant to be a starting point for understanding how the AudioPlayer works. What does it do?
-
-* Launches and prompts the user to say "Play"
-* Starts playing a podcast when the user says "Play"
-* Pauses and Resumes, at the user's request
-
-We will expand on the behavior in future postings, but this is meant to get someone started as easily as possible.
-
-These instructions assume you are using the `bst proxy` for testing locally on your laptop. Alternatively, this can be run directly from the AWS Lambda environment.
-
-## Testing With The Service Simulator
-To ensure everything is working correctly, make sure that your bst proxy is running:
-```
-bst proxy lambda index.js
-```
-(Again, this should be run from the directory where you cloned the project, such as /Users/jpk/dev/super-simple-audio-player)
-
-Then on the "Test" section, go to the **Service Simulator** section at the bottom and type `Play`. Then click the `Ask Super Simple Player` button. It should return output like below:
-
-![Service Simulator](https://raw.githubusercontent.com/bespoken/super-simple-audio-player/Part1/misc/SkillServiceSimulator.png)
-
-## Testing With An Echo Device
-Again, make sure that your bst proxy is running:
-```
-bst proxy lambda index.js
-```
-
-Then just talk to your Echo device - say something like:
-```
-Alexa, tell Simple Player to Play
-```
-
-You should also be able to interact with it saying "Alexa Pause" and "Alexa Resume".
-
-## What's Next
-In Part 2, [we show you how to use the AudioPlayer queue](https://github.com/bespoken/super-simple-audio-player/blob/Part2/README.md), to move through a playlist of tracks automatically as well as at the user's command.
+## What Is Next?
+Our AudioPlayer skill is getting more complicated. To make sure it's all working correctly without lots of tedious manual testing,
+in our next edition we will add unit tests with [the BSTAlexa emulator](http://docs.bespoken.tools/en/latest/tutorials/tutorial_bst_emulator_nodejs/).

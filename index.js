@@ -2,10 +2,19 @@
 // It is NOT a real database, but can be used for testing, as JavaScript Lambdas tend to live for a few hours
 // Stay tuned for a more sophisticated example that uses DynamoDB
 var lastPlayedByUser = {};
+<<<<<<< HEAD
 var podcastURL = "https://s3-us-west-2.amazonaws.com/smart-radio/audio/piano-1.mp3";
 
 const bst = require("bespoken-tools");
 bst.Logless.Domain = "logless-dev.bespoken.tools";
+=======
+
+var podcastFeed = [
+    "https://feeds.soundcloud.com/stream/318108640-user-652822799-episode-012-alexa-skill-certification-with-sameer-lalwanilexa-dev-chat-final-mix.mp3",
+    "https://feeds.soundcloud.com/stream/314247951-user-652822799-episode-011-alexa-smart-home-partner-network-with-zach-parker.mp3",
+    "https://feeds.soundcloud.com/stream/309340878-user-652822799-episode-010-building-an-alexa-skill-with-flask-ask-with-john-wheeler.mp3"
+];
+>>>>>>> Part2
 
 // Entry-point for the Lambda
 exports.handler = bst.Logless.capture("a756512f-d091-477a-a4f9-fd57c916787a", function(event, context) {
@@ -23,19 +32,44 @@ var SimplePlayer = function (event, context) {
 SimplePlayer.prototype.handle = function () {
     var requestType = this.event.request.type;
     var userId = this.event.context ? this.event.context.System.user.userId : this.event.session.user.userId;
+<<<<<<< HEAD
+=======
+    var podcastIndex;
+>>>>>>> Part2
 
     // On launch, we tell the user what they can do (Play audio :-))
     if (requestType === "LaunchRequest") {
         console.log("[LaunchRequest]")
         this.say("Welcome to the Simple Audio Player. Say Play to play some audio!", "You can say Play");
 
-    // Handle Intents here - Play, Pause and Resume is all for now
+    // Handle Intents here - Play, Next, Previous, Pause and Resume
     } else if (requestType === "IntentRequest") {
         console.log("[IntentRequest]")
         var intent = this.event.request.intent;
+        var lastPlayed = this.loadLastPlayed(userId);
+
+        // We assume we start with the first podcast, but check the lastPlayed
+        podcastIndex = indexFromEvent(lastPlayed);
+
         if (intent.name === "Play") {
+<<<<<<< HEAD
             console.log("[Play]")
             this.play(podcastURL, 0);
+=======
+            this.play(podcastFeed[podcastIndex], 0, "REPLACE_ALL", podcastIndex);
+
+        } else if (intent.name === "AMAZON.NextIntent") {
+            // If we have reached the end of the feed, start back at the beginning
+            podcastIndex >= podcastFeed.length - 1 ? podcastIndex = 0 : podcastIndex++;
+
+            this.play(podcastFeed[podcastIndex], 0, "REPLACE_ALL", podcastIndex);
+
+        } else if (intent.name === "AMAZON.PreviousIntent") {
+            // If we have reached the start of the feed, go back to the end
+            podcastIndex == 0 ? podcastIndex = podcastFeed.length - 1 : podcastIndex--;
+
+            this.play(podcastFeed[podcastIndex], 0, "REPLACE_ALL", podcastIndex);
+>>>>>>> Part2
 
         } else if (intent.name === "AMAZON.PauseIntent") {
             console.log("[AMAZON.PauseIntent]")
@@ -44,15 +78,32 @@ SimplePlayer.prototype.handle = function () {
             this.stop();
 
         } else if (intent.name === "AMAZON.ResumeIntent") {
+<<<<<<< HEAD
             console.log("[AMAZON.ResumeIntent]")
             var lastPlayed = this.loadLastPlayed(userId);
+=======
+>>>>>>> Part2
             var offsetInMilliseconds = 0;
             if (lastPlayed !== null) {
                 offsetInMilliseconds = lastPlayed.request.offsetInMilliseconds;
             }
 
-            this.play(podcastURL, offsetInMilliseconds);
+            this.play(podcastFeed[podcastIndex], offsetInMilliseconds, "REPLACE_ALL", podcastIndex);
         }
+    } else if (requestType === "AudioPlayer.PlaybackNearlyFinished") {
+        var lastIndex = indexFromEvent(this.event);
+        podcastIndex = lastIndex;
+
+        // If we have reach the end of the feed, start back at the beginning
+        podcastIndex >= podcastFeed.length - 1 ? podcastIndex = 0 : podcastIndex++;
+
+        // Enqueue the next podcast
+        this.play(podcastFeed[podcastIndex], 0, "ENQUEUE", podcastIndex, lastIndex);
+
+    } else if (requestType === "AudioPlayer.PlaybackStarted") {
+        // We simply respond with true to acknowledge the request
+        this.context.succeed(true);
+
     } else if (requestType === "AudioPlayer.PlaybackStopped") {
         console.log("[AudioPlayer.PlaybackStopped]")
         // We save off the PlaybackStopped Intent, so we know what was last playing
@@ -91,11 +142,14 @@ SimplePlayer.prototype.say = function (message, repromptMessage) {
 };
 
 /**
- * Plays a particular track, from specific offset
+ * Plays a particular track for playback, either now or after the current track finishes
  * @param audioURL The URL to play
  * @param offsetInMilliseconds The point from which to play - we set this to something other than zero when resuming
+ * @param playBehavior Either REPLACE_ALL, ENQUEUE or REPLACE_ENQUEUED
+ * @param token An identifier for the track we are going to play next
+ * @param previousToken This should only be set if we are doing an ENQUEUE or REPLACE_ENQUEUED
  */
-SimplePlayer.prototype.play = function (audioURL, offsetInMilliseconds) {
+SimplePlayer.prototype.play = function (audioURL, offsetInMilliseconds, playBehavior, token, previousToken) {
     var response = {
         version: "1.0",
         response: {
@@ -103,12 +157,12 @@ SimplePlayer.prototype.play = function (audioURL, offsetInMilliseconds) {
             directives: [
                 {
                     type: "AudioPlayer.Play",
-                    playBehavior: "REPLACE_ALL", // Setting to REPLACE_ALL means that this track will start playing immediately
+                    playBehavior: playBehavior,
                     audioItem: {
                         stream: {
                             url: audioURL,
-                            token: "0", // Unique token for the track - needed when queueing multiple tracks
-                            expectedPreviousToken: null, // The expected previous token - when using queues, ensures safety
+                            token: token, // Unique token for the track - needed when queueing multiple tracks
+                            expectedPreviousToken: previousToken, // The expected previous token - when using queues, ensures safety
                             offsetInMilliseconds: offsetInMilliseconds
                         }
                     }
@@ -150,3 +204,15 @@ SimplePlayer.prototype.loadLastPlayed = function (userId) {
     }
     return lastPlayed;
 };
+<<<<<<< HEAD
+=======
+
+var indexFromEvent = function(event) {
+    var index = 0;
+    if (event) {
+        // Turn it into an index - we will add or subtract if the user said next or previous
+        index = parseInt(event.request.token);
+    }
+    return index;
+};
+>>>>>>> Part2
