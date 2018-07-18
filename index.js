@@ -8,9 +8,11 @@ bst.Logless.Domain = "logless-dev.bespoken.tools";
 
 var podcastFeed = [
     "https://feeds.soundcloud.com/stream/318108640-user-652822799-episode-012-alexa-skill-certification-with-sameer-lalwanilexa-dev-chat-final-mix.mp3",
-    "https://feeds.soundcloud.com/stream/314247951-user-652822799-episode-011-alexa-smart-home-partner-network-with-zach-parker.mp3",
-    "https://feeds.soundcloud.com/stream/309340878-user-652822799-episode-010-building-an-alexa-skill-with-flask-ask-with-john-wheeler.mp3"
+    "https://s3-us-west-2.amazonaws.com/hallooinc/audio/count-down-from-10.mp3"
+    
 ];
+
+var empty_queue_indicator=0;
 
 // Entry-point for the Lambda
 exports.handler = bst.Logless.capture("a756512f-d091-477a-a4f9-fd57c916787a", function(event, context) {
@@ -79,15 +81,28 @@ SimplePlayer.prototype.handle = function () {
         podcastIndex = lastIndex;
 
         // If we have reach the end of the feed, start back at the beginning
-        podcastIndex >= podcastFeed.length - 1 ? podcastIndex = 0 : podcastIndex++;
-
-        // Enqueue the next podcast
-        this.play(podcastFeed[podcastIndex], 0, "ENQUEUE", podcastIndex, lastIndex);
+        // podcastIndex >= podcastFeed.length - 1 ? podcastIndex = 0 : podcastIndex++;
+        if(podcastIndex==podcastFeed.length-1){
+            this.play('https://s3-us-west-2.amazonaws.com/hallooinc/audio/piano-1.mp3', 0, "ENQUEUE", podcastIndex, lastIndex);
+            podcastIndex = 0;
+        }
+        else if(podcastIndex>=podcastFeed.length){
+            podcastIndex++;
+            this.play('https://s3-us-west-2.amazonaws.com/hallooinc/audio/piano-1.mp3', 0, "ENQUEUE", podcastIndex, lastIndex);
+        }else{
+            // Enqueue the next podcast
+            this.play(podcastFeed[podcastIndex], 0, "ENQUEUE", podcastIndex, lastIndex);
+        }
 
     } else if (requestType === "AudioPlayer.PlaybackStarted") {
         // We simply respond with true to acknowledge the request
+        console.log("[PlaybackStarted]");
+        if(empty_queue_indicator===1){
+            this.extractMessage();
+        } else{
+            empty_queue_indicator=0;
+        }
         this.context.succeed(true);
-
     } else if (requestType === "AudioPlayer.PlaybackStopped") {
         console.log("[AudioPlayer.PlaybackStopped]")
         // We save off the PlaybackStopped Intent, so we know what was last playing
@@ -196,4 +211,8 @@ var indexFromEvent = function(event) {
         index = parseInt(event.request.token);
     }
     return index;
+};
+
+SimplePlayer.prototype.extractMessage= function(){    
+    podcastFeed = ["https://s3-us-west-2.amazonaws.com/hallooinc/audio/piano-1.mp3", "https://s3-us-west-2.amazonaws.com/hallooinc/audio/count-down-from-10.mp3"];
 };
